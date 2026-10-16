@@ -21,6 +21,8 @@ export interface IAnalysis extends Document {
     pageCount?: number;
     title?: string;
     publisher?: string;
+    publicationDate?: string;
+    retrievalTimestamp?: string;
   };
   totalClaimsCount: number;
   supportedClaimsCount: number;
@@ -59,7 +61,9 @@ const AnalysisSchema = new Schema<IAnalysis>(
       mimeType: String,
       pageCount: Number,
       title: String,
-      publisher: String
+      publisher: String,
+      publicationDate: String,
+      retrievalTimestamp: String
     },
     totalClaimsCount: { type: Number, default: 0 },
     supportedClaimsCount: { type: Number, default: 0 },

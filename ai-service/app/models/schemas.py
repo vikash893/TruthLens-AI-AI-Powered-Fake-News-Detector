@@ -21,6 +21,13 @@ class EvidenceRelationship(str, Enum):
     REFUTES = "REFUTES"
     CONTEXT = "CONTEXT"
     MENTION = "MENTION"
+    UNRELATED = "UNRELATED"
+
+class ClaimType(str, Enum):
+    FACTUAL = "factual"
+    ALLEGATION = "allegation"
+    OPINION = "opinion"
+    PREDICTION = "prediction"
 
 class ExcerptType(str, Enum):
     DIRECT_QUOTE = "direct_quote"
@@ -64,10 +71,13 @@ class ExtractedClaim(BaseModel):
     original_text: str
     normalized_text: str
     category: str = "General News"
+    claim_type: str = "factual"
+    attribution: Optional[str] = None
     named_entities: List[str] = Field(default_factory=list)
     relevant_dates: List[str] = Field(default_factory=list)
     numeric_values: List[str] = Field(default_factory=list)
     geographic_context: Optional[str] = None
+    context_anchors: List[str] = Field(default_factory=list)
     language: str = "en"
     is_verifiable: bool = True
     extraction_confidence: float = 0.85
@@ -75,6 +85,8 @@ class ExtractedClaim(BaseModel):
 class ClaimExtractRequest(BaseModel):
     text: str
     max_claims: int = 10
+    document_title: Optional[str] = None
+    document_publisher: Optional[str] = None
 
 class ClaimExtractResponse(BaseModel):
     claims: List[ExtractedClaim]
@@ -93,10 +105,19 @@ class RawEvidenceItem(BaseModel):
     reliability_tier: str = "TIER_3"
     relevance_score: float = 0.5
     search_query: str
+    content_hash: Optional[str] = None
+
+class QueryDiagnostic(BaseModel):
+    query: str
+    total_retrieved: int = 0
+    relevant_retained: int = 0
+    filtered_out: int = 0
+    reason: Optional[str] = None
 
 class EvidenceSearchRequest(BaseModel):
     claim_text: str
     named_entities: List[str] = Field(default_factory=list)
+    context_anchors: List[str] = Field(default_factory=list)
     max_results: int = 6
 
 class EvidenceSearchResponse(BaseModel):
@@ -104,6 +125,7 @@ class EvidenceSearchResponse(BaseModel):
     queries_executed: List[str]
     items: List[RawEvidenceItem]
     total_found: int
+    diagnostics: List[QueryDiagnostic] = Field(default_factory=list)
 
 class RankedEvidenceItem(RawEvidenceItem):
     passage: str
@@ -137,6 +159,9 @@ class ConfidenceFactors(BaseModel):
 class ClaimAssessment(BaseModel):
     claim_id: str
     claim_text: str
+    claim_type: str = "factual"
+    attribution: Optional[str] = None
+    source_article_reporting: Optional[str] = None
     assessment_status: AssessmentStatus
     explanation: str
     confidence: ConfidenceFactors
@@ -147,6 +172,7 @@ class ClaimAssessment(BaseModel):
     citations: List[Dict[str, Any]] = Field(default_factory=list)
     missing_context: Optional[str] = None
     unresolved_questions: List[str] = Field(default_factory=list)
+    query_diagnostics: List[QueryDiagnostic] = Field(default_factory=list)
 
 class ClaimAssessRequest(BaseModel):
     claim: ExtractedClaim
@@ -156,6 +182,9 @@ class FullAnalysisRequest(BaseModel):
     content: str
     input_type: str = "text" # text, url, image, document
     source_url: Optional[str] = None
+    title: Optional[str] = None
+    publisher: Optional[str] = None
+    publication_date: Optional[str] = None
     max_claims: int = 6
 
 class FullAnalysisResponse(BaseModel):

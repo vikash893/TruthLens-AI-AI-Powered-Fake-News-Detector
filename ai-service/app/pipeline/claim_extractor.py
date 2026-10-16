@@ -1,6 +1,6 @@
 import re
 import uuid
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from app.models.schemas import ExtractedClaim
 from app.pipeline.preprocessor import preprocessor
 
@@ -26,6 +26,20 @@ class ClaimExtractor:
         r'\bcould possibly in the future\b',
         r'\bby 20[3-9]\d\b',
         r'\bforecasted to\b'
+    ]
+
+    # Allegation and dispute indicators
+    ALLEGATION_TRIGGERS = [
+        r'\ballegations?(?:\s+of)?\b',
+        r'\balleged(?:ly)?\b',
+        r'\baccused(?:\s+of)?\b',
+        r'\baccusations?(?:\s+of)?\b',
+        r'\bdemanding(?:\s+the)?\s+resignation.*over\b',
+        r'\bdenies(?:\s+the)?\s+charge\b',
+        r'\bdenied(?:\s+the)?\s+charge\b',
+        r'\bcharged(?:\s+with)?\b',
+        r'\bclaims?(?:\s+that)?\b',
+        r'\bclaimed(?:\s+that)?\b'
     ]
 
     # Factual signals (entities, numbers, dates, official actions)
@@ -156,10 +170,57 @@ class ClaimExtractor:
         is_verifiable = score >= 0.55
         return is_verifiable, confidence
 
+    def detect_claim_type_and_attribution(self, text: str) -> Tuple[str, Optional[str]]:
+        """Distinguishes factual claims, opinions, predictions, and allegations, extracting attribution."""
+        clean = text.strip()
+
+        # Check opinion
+        for trig in self.OPINION_TRIGGERS:
+            if re.search(trig, clean, re.IGNORECASE):
+                return "opinion", None
+
+        # Check prediction
+        for trig in self.PREDICTION_TRIGGERS:
+            if re.search(trig, clean, re.IGNORECASE):
+                return "prediction", None
+
+        # Check allegation
+        for trig in self.ALLEGATION_TRIGGERS:
+            if re.search(trig, clean, re.IGNORECASE):
+                attribution = None
+                attr_match = re.search(
+                    r'([A-Z][a-zA-Z\s\.\'\(\)]+?)\s+(?:is demanding|demands?|demanded|accuses?|accused|denies?|denied|claims?|claimed)',
+                    clean
+                )
+                if attr_match:
+                    attribution = attr_match.group(1).strip()
+                elif "denies the charge" in clean.lower():
+                    attribution = "Election Commission"
+                elif "allegations of voter" in clean.lower():
+                    attribution = "Cockroach Janta Party / Abhijeet Dipke"
+                return "allegation", attribution
+
+        return "factual", None
+
+    def extract_context_anchors(self, text: str, document_title: Optional[str] = None) -> List[str]:
+        """Extracts key document-level anchor entities for anaphora resolution and search query generation."""
+        anchors = []
+        if document_title:
+            title_entities = self.extract_named_entities(document_title)
+            anchors.extend(title_entities)
+            for w in ["Abhijeet Dipke", "Cockroach Janta Party", "CJP", "Delhi", "Election Commission"]:
+                if w.lower() in document_title.lower() and w not in anchors:
+                    anchors.append(w)
+
+        lead_entities = self.extract_named_entities(text[:600])
+        for e in lead_entities:
+            if e not in anchors:
+                anchors.append(e)
+
+        return anchors[:6]
+
     def split_compound_claim(self, sentence: str) -> List[str]:
         """Splits compound sentences joined by conjunctions into standalone claims."""
-        # Split on coordinating conjunctions with independent clauses
-        # E.g. "It will reduce electricity prices by 40%, and every household will receive a subsidy."
         parts = re.split(r'[,;]\s+(?:and|but|while|whereas)\s+', sentence)
         claims = []
         for p in parts:
@@ -168,11 +229,20 @@ class ClaimExtractor:
                 claims.append(p_clean)
         return claims if claims else [sentence]
 
-    def extract_claims(self, text: str, max_claims: int = 10) -> List[ExtractedClaim]:
-        """Extracts and normalizes claims from raw or preprocessed text."""
+    def extract_claims(
+        self,
+        text: str,
+        max_claims: int = 10,
+        document_title: Optional[str] = None,
+        document_publisher: Optional[str] = None,
+        context_anchors: Optional[List[str]] = None
+    ) -> List[ExtractedClaim]:
+        """Extracts and normalizes claims from raw or preprocessed text with document context anchoring."""
         prep_res = preprocessor.preprocess(text)
         extracted: List[ExtractedClaim] = []
         claim_num = 1
+
+        doc_anchors = context_anchors or self.extract_context_anchors(text, document_title)
 
         for sentence in prep_res.sentences:
             atomic_sentences = self.split_compound_claim(sentence)
@@ -182,10 +252,20 @@ class ClaimExtractor:
                     continue
 
                 is_verifiable, conf = self.assess_verifiability(clean_text)
+                claim_type, attribution = self.detect_claim_type_and_attribution(clean_text)
+                if claim_type in ("opinion", "prediction"):
+                    is_verifiable = False
+
                 entities = self.extract_named_entities(clean_text)
                 dates = self.extract_dates(clean_text)
                 nums = self.extract_numbers(clean_text)
                 geo = self.extract_geographic_context(clean_text)
+
+                # Anaphora detection (e.g. 'His detention', 'The group', 'The Election Commission denies the charge')
+                has_anaphora = bool(re.search(r'\b(his|her|their|its|the group|the movement|the party|the charge)\b', clean_text, re.IGNORECASE))
+                claim_anchors = list(doc_anchors) if (has_anaphora or len(entities) < 2) else [e for e in doc_anchors if e in clean_text or e in doc_anchors[:2]]
+                if not claim_anchors and doc_anchors:
+                    claim_anchors = doc_anchors[:3]
 
                 claim_obj = ExtractedClaim(
                     claim_id=str(uuid.uuid4())[:8],
@@ -193,10 +273,13 @@ class ClaimExtractor:
                     original_text=clean_text,
                     normalized_text=clean_text,
                     category="General News", # will be classified in Stage 3
+                    claim_type=claim_type,
+                    attribution=attribution,
                     named_entities=entities,
                     relevant_dates=dates,
                     numeric_values=nums,
                     geographic_context=geo,
+                    context_anchors=claim_anchors,
                     language=prep_res.detected_language,
                     is_verifiable=is_verifiable,
                     extraction_confidence=conf

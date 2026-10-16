@@ -27,6 +27,8 @@ class Settings(BaseSettings):
     
     # Embedding & Reranking
     EMBEDDING_BACKEND: str = os.getenv("EMBEDDING_BACKEND", "tfidf") # tfidf or sentence_transformers
+    MIN_RELEVANCE_THRESHOLD: float = float(os.getenv("MIN_RELEVANCE_THRESHOLD", "0.28"))
+    ENABLE_CROSS_ENCODER_RERANK: bool = os.getenv("ENABLE_CROSS_ENCODER_RERANK", "false").lower() == "true"
     
     # Crawler and URL safety
     MAX_PAGE_CONTENT_BYTES: int = 250000 # 250 KB

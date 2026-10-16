@@ -25,6 +25,7 @@ export interface IEvidence extends Document {
   reliabilityTier: string;
   explanationOfRelevance?: string;
   searchQuery?: string;
+  contentHash?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,7 +57,8 @@ const EvidenceSchema = new Schema<IEvidence>(
     isPrimarySource: { type: Boolean, default: false },
     reliabilityTier: { type: String, default: 'TIER_3' },
     explanationOfRelevance: { type: String },
-    searchQuery: { type: String }
+    searchQuery: { type: String },
+    contentHash: { type: String }
   },
   { timestamps: true }
 );

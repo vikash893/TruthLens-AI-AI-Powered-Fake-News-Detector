@@ -21,12 +21,25 @@ export interface IConfidenceFactors {
   calibrationNotes: string;
 }
 
+export type ClaimType = 'factual' | 'allegation' | 'opinion' | 'prediction';
+
+export interface IQueryDiagnostic {
+  query: string;
+  totalRetrieved: number;
+  relevantRetained: number;
+  filteredOut: number;
+  reason?: string;
+}
+
 export interface IClaim extends Document {
   analysisId: mongoose.Types.ObjectId;
   claimNumber: number;
   originalText: string;
   normalizedText: string;
   category: string;
+  claimType: ClaimType;
+  attribution?: string;
+  sourceArticleReporting?: string;
   namedEntities: string[];
   relevantDates: string[];
   numericValues: string[];
@@ -43,6 +56,7 @@ export interface IClaim extends Document {
   supportingCount: number;
   contradictingCount: number;
   neutralCount: number;
+  queryDiagnostics?: IQueryDiagnostic[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +68,13 @@ const ClaimSchema = new Schema<IClaim>(
     originalText: { type: String, required: true },
     normalizedText: { type: String, required: true },
     category: { type: String, default: 'General News', index: true },
+    claimType: {
+      type: String,
+      enum: ['factual', 'allegation', 'opinion', 'prediction'],
+      default: 'factual'
+    },
+    attribution: { type: String },
+    sourceArticleReporting: { type: String },
     namedEntities: [{ type: String }],
     relevantDates: [{ type: String }],
     numericValues: [{ type: String }],
@@ -87,7 +108,16 @@ const ClaimSchema = new Schema<IClaim>(
     unresolvedQuestions: [{ type: String }],
     supportingCount: { type: Number, default: 0 },
     contradictingCount: { type: Number, default: 0 },
-    neutralCount: { type: Number, default: 0 }
+    neutralCount: { type: Number, default: 0 },
+    queryDiagnostics: [
+      {
+        query: { type: String },
+        totalRetrieved: { type: Number, default: 0 },
+        relevantRetained: { type: Number, default: 0 },
+        filteredOut: { type: Number, default: 0 },
+        reason: { type: String }
+      }
+    ]
   },
   { timestamps: true }
 );

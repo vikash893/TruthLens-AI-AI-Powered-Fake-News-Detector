@@ -57,6 +57,9 @@ export class AnalysisController {
         originalText: c.claim_text,
         normalizedText: c.claim_text,
         category: 'General News',
+        claimType: c.claim_type || 'factual',
+        attribution: c.attribution || undefined,
+        sourceArticleReporting: c.source_article_reporting || undefined,
         assessmentStatus: c.assessment_status,
         assessmentExplanation: c.explanation,
         confidenceLabel: c.confidence.confidence_label,
@@ -76,7 +79,8 @@ export class AnalysisController {
         unresolvedQuestions: c.unresolved_questions || [],
         supportingCount: c.supporting_evidence?.length || 0,
         contradictingCount: c.contradicting_evidence?.length || 0,
-        neutralCount: c.neutral_context_evidence?.length || 0
+        neutralCount: c.neutral_context_evidence?.length || 0,
+        queryDiagnostics: c.query_diagnostics || []
       });
 
       createdClaims.push(claimDoc);
@@ -110,7 +114,8 @@ export class AnalysisController {
           isPrimarySource: ev.is_primary_source || false,
           reliabilityTier: ev.reliability_tier || 'TIER_3',
           explanationOfRelevance: ev.explanation_of_relevance,
-          searchQuery: ev.search_query
+          searchQuery: ev.search_query,
+          contentHash: ev.content_hash
         });
       }
     }
@@ -189,14 +194,21 @@ export class AnalysisController {
       metadata: {
         sourceUrl: url,
         title: fetched.title,
-        publisher: fetched.publisher
+        publisher: fetched.publisher,
+        publicationDate: fetched.publicationDate,
+        retrievalTimestamp: fetched.retrievalTimestamp
       },
       status: 'processing',
       processingStage: 'extracting_claims'
     });
 
     try {
-      const aiResult = await aiServiceClient.analyzeContent(fetched.extractedText, 'url', url);
+      const aiResult = await aiServiceClient.analyzeContent(fetched.extractedText, 'url', url, {
+        title: fetched.title,
+        publisher: fetched.publisher,
+        publicationDate: fetched.publicationDate,
+        sourceUrl: url
+      });
       await this.persistAnalysisResults(analysis._id as any, aiResult);
 
       const completeReport = await this.getFullReport(analysis._id.toString());

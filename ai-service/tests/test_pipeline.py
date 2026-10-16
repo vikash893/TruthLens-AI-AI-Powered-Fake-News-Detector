@@ -129,7 +129,8 @@ def test_insufficient_evidence_never_assumes_false():
     assert conf.independent_sources_count == 0
 
 @pytest.mark.asyncio
-async def test_claim_assessor_full_pipeline():
+async def test_claim_assessor_full_pipeline(monkeypatch):
+    monkeypatch.setattr("app.core.config.settings.SEARCH_PROVIDER", "mock")
     claims = claim_extractor.extract_claims("The Ministry of Energy yesterday confirmed a new regulatory framework that will reduce electricity prices by 40%.")
     assert len(claims) >= 1
     assessment = await claim_assessor.assess_claim(claims[0])

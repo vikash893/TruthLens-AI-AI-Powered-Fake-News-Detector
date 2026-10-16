@@ -2,11 +2,23 @@ import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
 
+export interface SourceMetadata {
+  title?: string;
+  publisher?: string;
+  publicationDate?: string;
+  sourceUrl?: string;
+  retrievalTimestamp?: string;
+}
+
 export interface AIClaimResponse {
   claim_id: string;
+  claim_number: number;
   claim_text: string;
+  claim_type?: string;
+  attribution?: string;
   assessment_status: string;
   explanation: string;
+  source_article_reporting?: string;
   confidence: {
     independent_sources_count: number;
     primary_sources_count: number;
@@ -25,6 +37,13 @@ export interface AIClaimResponse {
   citations: any[];
   missing_context?: string;
   unresolved_questions: string[];
+  query_diagnostics?: {
+    query: string;
+    total_retrieved: number;
+    relevant_retained: number;
+    filtered_out: number;
+    reason: string;
+  }[];
 }
 
 export interface AIAnalysisResult {
@@ -44,7 +63,7 @@ export interface AIAnalysisResult {
 export class AIServiceClient {
   private client = axios.create({
     baseURL: config.aiServiceUrl,
-    timeout: 35000,
+    timeout: 45000,
     headers: {
       'Content-Type': 'application/json',
       'X-Internal-Secret': config.internalApiSecret
@@ -64,14 +83,18 @@ export class AIServiceClient {
   async analyzeContent(
     content: string,
     inputType: string = 'text',
-    sourceUrl?: string
+    sourceUrl?: string,
+    metadata?: SourceMetadata
   ): Promise<AIAnalysisResult> {
     try {
       logger.info(`Sending analysis request to AI service (${content.length} chars, inputType=${inputType})`);
       const res = await this.client.post<AIAnalysisResult>('/v1/analyze', {
         content,
         input_type: inputType,
-        source_url: sourceUrl,
+        source_url: sourceUrl || metadata?.sourceUrl,
+        title: metadata?.title,
+        publisher: metadata?.publisher,
+        publication_date: metadata?.publicationDate,
         max_claims: 6
       });
       return res.data;

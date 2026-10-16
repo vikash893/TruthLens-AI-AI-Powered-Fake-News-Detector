@@ -25,10 +25,13 @@ class FallbackProvider(BaseLLMProvider):
             }
 
         if not evidence:
+            caveats = ["Absence of evidence in the search index does not disprove the claim."]
+            if claim.claim_type == "allegation":
+                caveats.append("This claim involves an unverified allegation or political demand.")
             return {
                 "assessment_status": AssessmentStatus.INSUFFICIENT_EVIDENCE.value,
                 "explanation": "No credible external reporting or documentation was found regarding this claim. Following our 'evidence first' doctrine, the system leaves this claim unverified rather than assuming it is false.",
-                "caveats": ["Absence of evidence in the search index does not disprove the claim."],
+                "caveats": caveats,
                 "missing_context": "Primary documents or independent confirmations are unavailable.",
                 "unresolved_questions": ["Did an official announcement take place through an unindexed channel?"]
             }
@@ -44,17 +47,26 @@ class FallbackProvider(BaseLLMProvider):
                 f"Retrieved reporting from {refute_items[0].publisher or refute_items[0].domain} "
                 f"directly refutes or debunks the claim: '{refute_items[0].snippet[:140]}...'"
             )
-            caveats = ["Check for ongoing updates if official investigations are still active."]
+            caveats = ["Check for ongoing updates if official investigations or statements are active."]
             missing_context = "The claim omits public debunking and official corrections."
             unresolved = []
 
         elif len(support_items) > 0 and len(refute_items) == 0:
             status = AssessmentStatus.SUPPORTED.value
-            explanation = (
-                f"Retrieved documentation from {support_items[0].publisher or support_items[0].domain} "
-                f"supports this claim: '{support_items[0].snippet[:140]}...'"
-            )
-            caveats = ["Verification depends on the continued accuracy of the cited reporting."]
+            if claim.claim_type == "allegation":
+                explanation = (
+                    f"Retrieved documentation from {support_items[0].publisher or support_items[0].domain} "
+                    f"corroborates that this allegation or political demand was officially made: '{support_items[0].snippet[:140]}...'"
+                )
+                caveats = [
+                    "This claim is verified as a public statement/demand made by the group. The underlying allegations have not been independently proven and remain contested."
+                ]
+            else:
+                explanation = (
+                    f"Retrieved documentation from {support_items[0].publisher or support_items[0].domain} "
+                    f"supports this claim: '{support_items[0].snippet[:140]}...'"
+                )
+                caveats = ["Verification depends on the continued accuracy of the cited reporting."]
             missing_context = None
             unresolved = []
 
@@ -82,10 +94,16 @@ class FallbackProvider(BaseLLMProvider):
 
         else:
             status = AssessmentStatus.INSUFFICIENT_EVIDENCE.value
-            explanation = "Retrieved sources mention related entities but do not provide direct confirmation or refutation."
+            explanation = "Retrieved sources mention related entities or topics, but do not provide direct confirmation or refutation."
             caveats = ["Sources lack direct corroboration for the specific numbers or assertion."]
             missing_context = "Direct statements or primary documentation."
-            unresolved = ["Are primary records available from local authorities?"]
+            unresolved = ["Are primary records available from official authorities?"]
+
+        # Ensure allegation caveats are always attached for allegation claims
+        if claim.claim_type == "allegation":
+            allegation_note = "This claim involves an allegation or political demand. The underlying allegations have not been independently proven and remain contested."
+            if not any("allegation" in c.lower() for c in caveats):
+                caveats.append(allegation_note)
 
         return {
             "assessment_status": status,

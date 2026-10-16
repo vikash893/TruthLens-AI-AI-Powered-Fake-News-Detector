@@ -148,5 +148,45 @@
     "is_primary_source": false,
     "reliability_tier": "TIER_2",
     "notes": "Articles written by academics and researchers with editorial review"
+  },
+  {
+    "domain": "thehindu.com",
+    "name": "The Hindu",
+    "category": "reputable_news",
+    "geographic_scope": "India / National",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "National daily newspaper of record in India"
+  },
+  {
+    "domain": "indianexpress.com",
+    "name": "The Indian Express",
+    "category": "reputable_news",
+    "geographic_scope": "India / National",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "Leading Indian investigative and daily news organization"
+  },
+  {
+    "domain": "eci.gov.in",
+    "name": "Election Commission of India",
+    "category": "government",
+    "geographic_scope": "India",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "Constitutional authority responsible for administering election processes in India"
+  },
+  {
+    "domain": "ndtv.com",
+    "name": "NDTV",
+    "category": "reputable_news",
+    "geographic_scope": "India",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_2",
+    "notes": "Indian national news broadcaster"
   }
 ]

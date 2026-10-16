@@ -23,11 +23,11 @@ class ConfidenceEngine:
                 primary_sources_count=0,
                 source_agreement_ratio=0.0,
                 directness_score=0.0,
-                recency_factor=0.5,
+                recency_factor=0.0,
                 evidence_coverage=0.0,
-                calculated_confidence_score=0.15,
+                calculated_confidence_score=0.0,
                 confidence_label=ConfidenceLabel.VERY_LOW,
-                calibration_notes="No verifiable claim or zero relevant external evidence retrieved."
+                calibration_notes="Zero verifiable external evidence retrieved."
             )
 
         # 1. Independent domains
@@ -47,42 +47,46 @@ class ConfidenceEngine:
             majority_count = max(len(support_items), len(refute_items))
             agreement_ratio = majority_count / total_conclusive
         else:
-            agreement_ratio = 0.5 # Ambiguous / contextual evidence only
+            agreement_ratio = 0.0 # No conclusive stance; contextual evidence only
 
         # 4. Directness
         direct_count = sum(1 for item in evidence_items if item.directness == "direct")
         directness_score = direct_count / max(1, len(evidence_items))
 
         # 5. Evidence Coverage
-        # Check if high-ranking evidence items exist (final rank score >= 0.5)
         high_rel_count = sum(1 for item in evidence_items if item.final_rank_score >= 0.50)
         coverage_score = min(1.0, high_rel_count / max(1, min(3, len(evidence_items))))
 
-        # Weighted calculation
-        # Independent sources factor: 3 or more independent sources gives 1.0
+        # Calibrated Empirical Multi-factor Formula:
+        # Score = 0.30 * SourceFactor + 0.20 * PrimaryFactor + 0.25 * AgreementRatio + 0.15 * Directness + 0.10 * Coverage
         source_factor = min(1.0, independent_sources_count / 3.0)
-        primary_factor = 1.0 if primary_sources_count > 0 else 0.55
-        recency_factor = 0.85 # baseline for recently fetched web results
+        primary_factor = 1.0 if primary_sources_count > 0 else 0.0
+        recency_factor = 0.85
 
         score = (
-            0.25 * source_factor +
+            0.30 * source_factor +
             0.20 * primary_factor +
             0.25 * agreement_ratio +
             0.15 * directness_score +
-            0.15 * coverage_score
+            0.10 * coverage_score
         )
-        score = round(float(min(0.98, max(0.10, score))), 2)
 
-        # Assign calibrated label
-        if score >= 0.75 and independent_sources_count >= 2:
+        # If zero conclusive items (only contextual or mentions), cap confidence at 0.30 LOW
+        if total_conclusive == 0:
+            score = min(0.30, score * 0.5)
+
+        score = round(float(min(0.98, max(0.0, score))), 2)
+
+        # Assign calibrated qualitative labels
+        if score >= 0.70 and independent_sources_count >= 2 and total_conclusive >= 2:
             label = ConfidenceLabel.HIGH
             notes = f"High confidence based on {independent_sources_count} independent sources with {round(agreement_ratio*100)}% agreement."
-        elif score >= 0.50:
+        elif score >= 0.45 and total_conclusive >= 1:
             label = ConfidenceLabel.MEDIUM
             notes = f"Moderate confidence: {independent_sources_count} source(s) identified with direct relevance."
-        elif score >= 0.30:
+        elif score >= 0.20:
             label = ConfidenceLabel.LOW
-            notes = "Low confidence: Evidence is sparse, indirect, or exhibits noticeable disagreement."
+            notes = "Low confidence: Evidence is sparse, indirect, or contextual without multiple independent confirmations."
         else:
             label = ConfidenceLabel.VERY_LOW
             notes = "Very low confidence: Available evidence is insufficient for robust verification."

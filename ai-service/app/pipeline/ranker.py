@@ -7,6 +7,7 @@ from app.models.schemas import (
     ExcerptType
 )
 from app.pipeline.embedder import embedder
+from app.core.config import settings
 
 class EvidenceRanker:
     """Stage 5b: Evidence Ranking, Stance Detection & Directness Evaluation"""
@@ -16,7 +17,7 @@ class EvidenceRanker:
     ]
 
     SUPPORTING_CUES = [
-        r'\b(confirmed|verified|true|officially announced|proves|corroborates|shows that|established|valid|authenticated|passed the law|signed into law|published data|announced|stated|reported|revealed|agreed|approved|found that|decreed|signed|concluded|records show|according to|data indicates|effective from|passed the bill|implemented|published|decree|regulations)\b'
+        r'\b(confirmed|verified|true|officially announced|proves|corroborates|shows that|established|valid|authenticated|passed the law|signed into law|published data|announced|stated|reported|revealed|agreed|approved|found that|decreed|signed|concluded|records show|according to|data indicates|effective from|passed the bill|implemented|published|decree|regulations|detained|detention|custody|preventive custody|arrest|arrested|preventive detention|deployed|security personnel|warning|denies|denied|rejects|rejected|demanding|demanded|called on|urged supporters)\b'
     ]
 
     QUALIFYING_CUES = [
@@ -52,13 +53,18 @@ class EvidenceRanker:
         support_targeted = False
         qualify_matches = 0
 
+        # 1. Relevance threshold check: separate relevance filtering from stance classification
+        combined_rel = max(keyword_score, (0.45 * semantic_score) + (0.55 * keyword_score))
+        if combined_rel < settings.MIN_RELEVANCE_THRESHOLD and keyword_score < 0.20:
+            return EvidenceRelationship.UNRELATED, f"Passage does not meet minimum relevance threshold ({combined_rel:.2f} < {settings.MIN_RELEVANCE_THRESHOLD:.2f})."
+
         for sent in sentences:
             # Check refuting cues
             has_refute_cue = any(re.search(pat, sent) for pat in self.REFUTING_CUES)
             if has_refute_cue:
                 refute_matches += 1
                 overlap = sum(1 for w in claim_content_words if w in sent)
-                if overlap >= 2 or (len(claim_content_words) > 0 and overlap / len(claim_content_words) >= 0.4):
+                if overlap >= 2 or (len(claim_content_words) > 0 and overlap / len(claim_content_words) >= 0.35):
                     refute_targeted = True
 
             # Check supporting cues (only if sentence is not refuting)
@@ -66,7 +72,7 @@ class EvidenceRanker:
             if has_support_cue:
                 support_matches += 1
                 overlap = sum(1 for w in claim_content_words if w in sent)
-                if overlap >= 2 or (len(claim_content_words) > 0 and overlap / len(claim_content_words) >= 0.3):
+                if overlap >= 2 or (len(claim_content_words) > 0 and overlap / len(claim_content_words) >= 0.25):
                     support_targeted = True
 
             # Check qualifying cues
@@ -76,37 +82,40 @@ class EvidenceRanker:
 
         if refute_targeted:
             return EvidenceRelationship.REFUTES, "Passage contains explicit refutation, debunking, or contradiction keywords regarding the claim."
-        elif qualify_matches > 0 and (support_targeted or keyword_score >= 0.3):
+        elif qualify_matches > 0 and (support_targeted or keyword_score >= 0.25):
             return EvidenceRelationship.CONTEXT, "Passage introduces critical nuances, scope limitations, or contextual qualifications."
-        elif support_targeted or (support_matches > 0 and (keyword_score >= 0.25 or semantic_score >= 0.40)):
-            return EvidenceRelationship.SUPPORTS, "Passage independently corroborates the reported events, official announcements, or statistics."
+        elif support_targeted or (support_matches > 0 and (keyword_score >= 0.20 or semantic_score >= 0.30)):
+            return EvidenceRelationship.SUPPORTS, "Passage independently corroborates the reported events, official announcements, or assertions."
         elif refute_matches > 0 and not support_targeted:
             return EvidenceRelationship.CONTEXT, "Passage discusses related disputes or nuances without directly disproving this claim."
         elif support_matches > 0:
             return EvidenceRelationship.SUPPORTS, "Passage corroborates the reported events or details."
         else:
-            return EvidenceRelationship.MENTION, "Passage discusses related topics or entities without definitive verdict stance."
+            return EvidenceRelationship.CONTEXT, "Passage provides background context and surrounding circumstances without directly affirming or refuting the claim."
 
     def evaluate_directness(self, claim_text: str, snippet: str) -> str:
         """Checks if evidence addresses key numerical/entity anchors directly."""
         claim_numbers = re.findall(r'\b\d+(?:\.\d+)?%?\b', claim_text)
         if claim_numbers:
-            # Check if any numbers appear in snippet
             for num in claim_numbers:
                 if num in snippet:
                     return "direct"
-        
-        # Check if significant portion of phrasing matches
+
         words = [w for w in claim_text.lower().split() if len(w) > 4]
         if words:
             matching = [w for w in words if w in snippet.lower()]
-            if len(matching) / len(words) >= 0.5:
+            if len(matching) / len(words) >= 0.4:
                 return "direct"
 
         return "indirect"
 
-    def rank_evidence(self, claim_text: str, items: List[RawEvidenceItem]) -> List[RankedEvidenceItem]:
-        """Reranks evidence items using semantic similarity, keyword overlap, and provenance."""
+    def rank_evidence(
+        self,
+        claim_text: str,
+        items: List[RawEvidenceItem],
+        filter_unrelated: bool = True
+    ) -> List[RankedEvidenceItem]:
+        """Reranks evidence items using semantic similarity, keyword overlap, and provenance, filtering unrelated items."""
         if not items:
             return []
 
@@ -132,6 +141,11 @@ class EvidenceRanker:
             final_rank = (0.45 * sem_score) + (0.35 * kw_score) + (0.20 * prov_score)
 
             relationship, rationale = self.detect_stance(claim_text, item.snippet, kw_score, sem_score)
+
+            # If filtering unrelated items, skip them
+            if filter_unrelated and relationship == EvidenceRelationship.UNRELATED:
+                continue
+
             directness = self.evaluate_directness(claim_text, item.snippet)
 
             ranked_item = RankedEvidenceItem(
@@ -148,6 +162,7 @@ class EvidenceRanker:
                 reliability_tier=item.reliability_tier,
                 relevance_score=item.relevance_score,
                 search_query=item.search_query,
+                content_hash=item.content_hash,
                 evidence_relationship=relationship,
                 semantic_score=round(float(sem_score), 3),
                 keyword_score=round(float(kw_score), 3),

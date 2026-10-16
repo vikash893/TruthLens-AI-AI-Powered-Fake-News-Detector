@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Dict, Any
 from fastapi import FastAPI, HTTPException, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
@@ -77,7 +77,12 @@ def preprocess_text(req: PreprocessRequest):
 
 @app.post("/v1/extract-claims", response_model=ClaimExtractResponse)
 def extract_claims(req: ClaimExtractRequest):
-    claims = claim_extractor.extract_claims(req.text, max_claims=req.max_claims)
+    claims = claim_extractor.extract_claims(
+        req.text,
+        max_claims=req.max_claims,
+        document_title=req.document_title,
+        document_publisher=req.document_publisher
+    )
     # Apply classifier to each extracted claim
     for c in claims:
         c.category = classifier.classify(c.original_text)
@@ -91,17 +96,24 @@ def extract_claims(req: ClaimExtractRequest):
 
 @app.post("/v1/search-evidence", response_model=EvidenceSearchResponse)
 def search_evidence(req: EvidenceSearchRequest):
-    queries = evidence_searcher.generate_search_queries(req.claim_text, req.named_entities)
-    items = evidence_searcher.search_evidence_for_claim(
+    queries = evidence_searcher.generate_search_queries(
         req.claim_text,
         req.named_entities,
-        max_results=req.max_results
+        context_anchors=req.context_anchors
+    )
+    items, diags = evidence_searcher.search_evidence_for_claim(
+        req.claim_text,
+        req.named_entities,
+        context_anchors=req.context_anchors,
+        max_results=req.max_results,
+        return_diagnostics=True
     )
     return EvidenceSearchResponse(
         claim_text=req.claim_text,
         queries_executed=queries,
         items=items,
-        total_found=len(items)
+        total_found=len(items),
+        diagnostics=diags
     )
 
 @app.post("/v1/rank-evidence", response_model=EvidenceRankResponse)
@@ -120,8 +132,13 @@ async def analyze_full_content(req: FullAnalysisRequest):
     # 1. Preprocess
     prep = preprocessor.preprocess(req.content)
     
-    # 2. Extract Claims
-    claims = claim_extractor.extract_claims(prep.normalized_text, max_claims=req.max_claims)
+    # 2. Extract Claims with document context anchoring
+    claims = claim_extractor.extract_claims(
+        prep.normalized_text,
+        max_claims=req.max_claims,
+        document_title=req.title,
+        document_publisher=req.publisher
+    )
     for c in claims:
         c.category = classifier.classify(c.original_text)
 
@@ -165,7 +182,7 @@ async def analyze_full_content(req: FullAnalysisRequest):
         insufficient_evidence_count=insufficient_cnt,
         overall_summary=summary,
         claims=assessed_claims,
-        created_at=datetime.utcnow().isoformat()
+        created_at=datetime.now(timezone.utc).isoformat()
     )
 
 if __name__ == "__main__":

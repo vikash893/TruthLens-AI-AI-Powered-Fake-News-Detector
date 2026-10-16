@@ -42,6 +42,18 @@ export interface IEvidence {
   isPrimarySource: boolean;
   reliabilityTier: string;
   explanationOfRelevance?: string;
+  contentHash?: string;
+  searchQuery?: string;
+}
+
+export type ClaimType = 'factual' | 'allegation' | 'opinion' | 'prediction';
+
+export interface IQueryDiagnostic {
+  query: string;
+  totalRetrieved: number;
+  relevantRetained: number;
+  filteredOut: number;
+  reason?: string;
 }
 
 export interface IClaim {
@@ -51,6 +63,9 @@ export interface IClaim {
   originalText: string;
   normalizedText: string;
   category: string;
+  claimType?: ClaimType;
+  attribution?: string;
+  sourceArticleReporting?: string;
   namedEntities: string[];
   relevantDates: string[];
   numericValues: string[];
@@ -67,6 +82,7 @@ export interface IClaim {
   supportingCount: number;
   contradictingCount: number;
   neutralCount: number;
+  queryDiagnostics?: IQueryDiagnostic[];
   evidence?: IEvidence[];
   createdAt: string;
 }

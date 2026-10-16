@@ -44,13 +44,17 @@ class ClaimAssessor:
     ) -> ClaimAssessment:
         """Runs full assessment on a single claim against evidence."""
         # 1. Retrieve evidence if not provided
+        query_diags = []
         if evidence_items is None:
             raw_items = evidence_searcher.search_evidence_for_claim(
                 claim.original_text,
                 claim.named_entities,
+                context_anchors=claim.context_anchors,
+                claim_type=claim.claim_type,
                 max_results=settings.MAX_SEARCH_RESULTS
             )
-            ranked_evidence = evidence_ranker.rank_evidence(claim.original_text, raw_items)
+            ranked_evidence = evidence_ranker.rank_evidence(claim.original_text, raw_items, filter_unrelated=True)
+            query_diags = list(evidence_searcher.last_diagnostics)
         else:
             ranked_evidence = evidence_items
 
@@ -77,8 +81,10 @@ class ClaimAssessor:
                 "source_url": e.source_url,
                 "publisher": e.publisher,
                 "domain": e.domain,
-                "relationship": e.evidence_relationship.value,
-                "is_primary_source": e.is_primary_source
+                "relationship": e.evidence_relationship.value if hasattr(e.evidence_relationship, "value") else str(e.evidence_relationship),
+                "is_primary_source": e.is_primary_source,
+                "content_hash": e.content_hash,
+                "excerpt_type": e.excerpt_type.value if hasattr(e.excerpt_type, "value") else str(e.excerpt_type)
             })
 
         # 5. Calculate calibrated confidence
@@ -91,6 +97,9 @@ class ClaimAssessor:
         return ClaimAssessment(
             claim_id=claim.claim_id,
             claim_text=claim.original_text,
+            claim_type=claim.claim_type,
+            attribution=claim.attribution,
+            source_article_reporting=f"Original article reporting: '{claim.original_text}'",
             assessment_status=status,
             explanation=synth_result.get("explanation", "Assessment completed based on available evidence."),
             confidence=confidence_factors,
@@ -100,7 +109,8 @@ class ClaimAssessor:
             important_caveats=synth_result.get("caveats", []),
             citations=citations,
             missing_context=synth_result.get("missing_context"),
-            unresolved_questions=synth_result.get("unresolved_questions", [])
+            unresolved_questions=synth_result.get("unresolved_questions", []),
+            query_diagnostics=query_diags
         )
 
 claim_assessor = ClaimAssessor()

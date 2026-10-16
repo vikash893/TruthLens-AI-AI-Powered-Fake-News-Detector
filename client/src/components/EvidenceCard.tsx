@@ -50,6 +50,17 @@ export const EvidenceCard: React.FC<EvidenceCardProps> = ({ evidence }) => {
           <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
             {evidence.reliabilityTier}
           </span>
+          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+            {evidence.excerptType === 'passage' ? 'Inspected Passage' : 'Search Snippet'}
+          </span>
+          {evidence.contentHash && (
+            <span
+              title={`Content Hash (SHA-256): ${evidence.contentHash}`}
+              className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-help"
+            >
+              SHA:{evidence.contentHash.slice(0, 8)}…
+            </span>
+          )}
         </div>
 
         <div className="text-[11px] text-slate-400 flex items-center gap-1">

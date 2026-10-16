@@ -7,6 +7,7 @@ export interface FetchedArticle {
   title: string;
   publisher: string;
   publicationDate?: string;
+  retrievalTimestamp: string;
   extractedText: string;
   wordCount: number;
 }
@@ -44,6 +45,7 @@ export class UrlFetcherService {
     if (ogTitleMatch && ogTitleMatch[1]) {
       title = ogTitleMatch[1].trim();
     }
+    title = this.decodeHtmlEntities(title);
 
     // 4. Extract publisher
     const parsed = new URL(rawUrl);
@@ -53,11 +55,23 @@ export class UrlFetcherService {
       publisher = ogSiteMatch[1].trim();
     }
 
-    // 5. Extract date
+    // 5. Extract date (meta tags, ld+json, or time tags)
     let pubDate: string | undefined;
-    const dateMatch = html.match(/<meta[^>]*(?:property|name)=["'](?:article:published_time|pubdate|date)["'][^>]*content=["']([^"']+)["']/i);
-    if (dateMatch && dateMatch[1]) {
-      pubDate = dateMatch[1].trim();
+    const ldJsonMatch = html.match(/"datePublished"\s*:\s*"([^"]+)"/i);
+    if (ldJsonMatch && ldJsonMatch[1]) {
+      pubDate = ldJsonMatch[1].trim();
+    }
+    if (!pubDate) {
+      const metaDateMatch = html.match(/<meta[^>]*(?:property|name)=["'](?:article:published_time|cXenseParse:publishtime|pubdate|date|sailthru\.date)["'][^>]*content=["']([^"']+)["']/i);
+      if (metaDateMatch && metaDateMatch[1]) {
+        pubDate = metaDateMatch[1].trim();
+      }
+    }
+    if (!pubDate) {
+      const timeTagMatch = html.match(/<time[^>]*datetime=["']([^"']+)["']/i);
+      if (timeTagMatch && timeTagMatch[1]) {
+        pubDate = timeTagMatch[1].trim();
+      }
     }
 
     // 6. Clean text: remove scripts, styles, svg, header, footer, nav
@@ -75,7 +89,8 @@ export class UrlFetcherService {
     const pMatches = clean.match(/<(p|h1|h2|h3)[^>]*>(.*?)<\/\1>/gi);
     if (pMatches) {
       for (const p of pMatches) {
-        const textOnly = p.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        let textOnly = p.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        textOnly = this.decodeHtmlEntities(textOnly);
         if (textOnly.length > 25) {
           paragraphs.push(textOnly);
         }
@@ -85,7 +100,7 @@ export class UrlFetcherService {
     let extractedText = paragraphs.join('\n\n');
     if (!extractedText || extractedText.length < 50) {
       // Fallback: strip all tags from remaining body
-      extractedText = clean.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+      extractedText = this.decodeHtmlEntities(clean.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
     }
 
     // Truncate if massive (max 15,000 characters)
@@ -94,15 +109,34 @@ export class UrlFetcherService {
     }
 
     const wordCount = extractedText.split(/\s+/).filter(Boolean).length;
+    const retrievalTimestamp = new Date().toISOString();
 
     return {
       originalUrl: rawUrl,
       title,
       publisher,
       publicationDate: pubDate,
+      retrievalTimestamp,
       extractedText,
       wordCount
     };
+  }
+
+  private decodeHtmlEntities(str: string): string {
+    return str
+      .replace(/&#x27;/g, "'")
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&#8216;/g, "'")
+      .replace(/&#8217;/g, "'")
+      .replace(/&#8220;/g, '"')
+      .replace(/&#8221;/g, '"')
+      .replace(/&#8211;/g, '-')
+      .replace(/&#8212;/g, '--');
   }
 }
 
