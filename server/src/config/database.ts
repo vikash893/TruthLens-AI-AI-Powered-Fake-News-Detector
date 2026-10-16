@@ -7,7 +7,7 @@ export const connectDatabase = async (): Promise<void> => {
     await mongoose.connect(config.mongoUri, {
       serverSelectionTimeoutMS: 2000
     });
-    logger.info(`Connected to MongoDB at ${config.mongoUri}`);
+    logger.info(` database Connected`);
   } catch (err: any) {
     logger.warn(`Could not connect to MongoDB at ${config.mongoUri} (${err.message}).`);
     logger.warn('Please ensure MongoDB is running (e.g. `docker run -d -p 27017:27017 --name mongo-truthlens mongo:latest` or local service).');
