@@ -1,0 +1,152 @@
+[
+  {
+    "domain": "who.int",
+    "name": "World Health Organization",
+    "category": "public_health",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "Primary international public health authority"
+  },
+  {
+    "domain": "cdc.gov",
+    "name": "Centers for Disease Control and Prevention",
+    "category": "public_health",
+    "geographic_scope": "United States",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "US national public health institute"
+  },
+  {
+    "domain": "reuters.com",
+    "name": "Reuters",
+    "category": "wire_service",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "International wire service with dedicated fact-checking unit"
+  },
+  {
+    "domain": "apnews.com",
+    "name": "Associated Press",
+    "category": "wire_service",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "Independent global news organization and IFCN fact checker"
+  },
+  {
+    "domain": "afp.com",
+    "name": "Agence France-Presse Fact Check",
+    "category": "fact_checker",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "Dedicated international fact-checking team"
+  },
+  {
+    "domain": "snopes.com",
+    "name": "Snopes",
+    "category": "fact_checker",
+    "geographic_scope": "United States / Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_2",
+    "notes": "Specialized fact-checking website with urban legend archives"
+  },
+  {
+    "domain": "politifact.com",
+    "name": "PolitiFact",
+    "category": "fact_checker",
+    "geographic_scope": "United States",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "Pulitzer Prize-winning political fact-checking organization"
+  },
+  {
+    "domain": "bbc.com",
+    "name": "BBC News",
+    "category": "reputable_news",
+    "geographic_scope": "United Kingdom / Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "Public service broadcaster with BBC Verify unit"
+  },
+  {
+    "domain": "nature.com",
+    "name": "Nature",
+    "category": "academic_journal",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "Peer-reviewed multidisciplinary science journal"
+  },
+  {
+    "domain": "science.org",
+    "name": "Science / AAAS",
+    "category": "academic_journal",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "Peer-reviewed scientific journal of AAAS"
+  },
+  {
+    "domain": "nasa.gov",
+    "name": "NASA",
+    "category": "government",
+    "geographic_scope": "United States / Space",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "Primary space and aeronautics agency"
+  },
+  {
+    "domain": "ipcc.ch",
+    "name": "Intergovernmental Panel on Climate Change",
+    "category": "government",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "UN body for assessing the science related to climate change"
+  },
+  {
+    "domain": "worldbank.org",
+    "name": "World Bank",
+    "category": "finance",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": true,
+    "reliability_tier": "TIER_1",
+    "notes": "International financial institution publishing official datasets"
+  },
+  {
+    "domain": "fullfact.org",
+    "name": "Full Fact",
+    "category": "fact_checker",
+    "geographic_scope": "United Kingdom",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_1",
+    "notes": "UK's independent fact-checking charity"
+  },
+  {
+    "domain": "theconversation.com",
+    "name": "The Conversation",
+    "category": "academic_journal",
+    "geographic_scope": "Global",
+    "language": "en",
+    "is_primary_source": false,
+    "reliability_tier": "TIER_2",
+    "notes": "Articles written by academics and researchers with editorial review"
+  }
+]
