@@ -118,9 +118,12 @@ export interface IAnalysis {
 
 export interface IUser {
   id: string;
+  _id?: string;
   name: string;
   email: string;
   role: 'user' | 'admin';
+  isBlocked?: boolean;
+  avatar?: string;
   preferences: {
     theme: 'light' | 'dark' | 'system';
     emailNotifications: boolean;
@@ -134,4 +137,45 @@ export interface IDashboardStats {
   distribution: Record<AssessmentStatus, number>;
   topicBreakdown: { topic: string; count: number }[];
   recentAnalyses: IAnalysis[];
+}
+
+export interface IAdminMetrics {
+  totalUsers: number;
+  activeUsers: number;
+  blockedUsers: number;
+  adminUsers: number;
+  totalAnalyses: number;
+  totalClaims: number;
+  recentAnalyses24h: number;
+  refutedFakeCount: number;
+  supportedGoodCount: number;
+  mixedCount: number;
+  insufficientCount: number;
+}
+
+export interface IAdminUser {
+  id: string;
+  _id: string;
+  name: string;
+  email: string;
+  role: 'user' | 'admin';
+  isBlocked: boolean;
+  avatar?: string;
+  analysisCount: number;
+  createdAt: string;
+}
+
+export interface IActivityLog {
+  _id: string;
+  userId?: string;
+  userEmail: string;
+  userName: string;
+  userRole: string;
+  action: string;
+  category: 'AUTH' | 'ANALYSIS' | 'USER_MANAGEMENT' | 'SYSTEM' | 'FEEDBACK';
+  details: string;
+  metadata?: any;
+  ipAddress?: string;
+  status: 'SUCCESS' | 'WARNING' | 'FAILED';
+  createdAt: string;
 }

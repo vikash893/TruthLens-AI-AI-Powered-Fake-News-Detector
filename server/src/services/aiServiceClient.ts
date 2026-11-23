@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { config } from '../config';
 import { logger } from '../utils/logger';
+import { verificationEngine } from './verificationEngine';
 
 export interface SourceMetadata {
   title?: string;
@@ -63,7 +64,7 @@ export interface AIAnalysisResult {
 export class AIServiceClient {
   private client = axios.create({
     baseURL: config.aiServiceUrl,
-    timeout: 45000,
+    timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
       'X-Internal-Secret': config.internalApiSecret
@@ -75,7 +76,6 @@ export class AIServiceClient {
       const res = await this.client.get('/health');
       return res.status === 200 && res.data.status === 'healthy';
     } catch (err: any) {
-      logger.warn(`AI service healthcheck failed: ${err.message}`);
       return false;
     }
   }
@@ -86,8 +86,9 @@ export class AIServiceClient {
     sourceUrl?: string,
     metadata?: SourceMetadata
   ): Promise<AIAnalysisResult> {
+    // 1. Try FastAPI AI service first if available
     try {
-      logger.info(`Sending analysis request to AI service (${content.length} chars, inputType=${inputType})`);
+      logger.info(`Attempting FastAPI AI service analysis (${content.length} chars, inputType=${inputType})`);
       const res = await this.client.post<AIAnalysisResult>('/v1/analyze', {
         content,
         input_type: inputType,
@@ -97,13 +98,16 @@ export class AIServiceClient {
         publication_date: metadata?.publicationDate,
         max_claims: 6
       });
-      return res.data;
+      if (res.data && res.data.claims && res.data.claims.length > 0) {
+        logger.info('FastAPI AI service responded successfully.');
+        return res.data;
+      }
     } catch (err: any) {
-      logger.error(`AI service call failed: ${err.message}`);
-      throw new Error(
-        `AI processing service unavailable (${err.message}). Ensure the Python FastAPI service is running on ${config.aiServiceUrl}.`
-      );
+      logger.warn(`FastAPI AI service unavailable (${err.message}). Activating TruthLens Resilient Verification Engine.`);
     }
+
+    // 2. Resilient fallback: Internal verification engine with live internet search & knowledge base
+    return await verificationEngine.analyze(content, inputType, sourceUrl, metadata);
   }
 }
 

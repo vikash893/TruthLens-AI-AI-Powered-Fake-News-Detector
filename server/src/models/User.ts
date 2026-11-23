@@ -9,8 +9,11 @@ export interface ISavedReport {
 export interface IUser extends Document {
   name: string;
   email: string;
-  passwordHash: string;
+  passwordHash?: string;
   role: 'user' | 'admin';
+  isBlocked: boolean;
+  googleId?: string;
+  avatar?: string;
   preferences: {
     theme: 'light' | 'dark' | 'system';
     emailNotifications: boolean;
@@ -24,8 +27,11 @@ const UserSchema = new Schema<IUser>(
   {
     name: { type: String, required: true, trim: true, maxlength: 100 },
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
-    passwordHash: { type: String, required: true },
+    passwordHash: { type: String, required: false },
     role: { type: String, enum: ['user', 'admin'], default: 'user' },
+    isBlocked: { type: Boolean, default: false, index: true },
+    googleId: { type: String, sparse: true },
+    avatar: { type: String },
     preferences: {
       theme: { type: String, enum: ['light', 'dark', 'system'], default: 'system' },
       emailNotifications: { type: Boolean, default: false }

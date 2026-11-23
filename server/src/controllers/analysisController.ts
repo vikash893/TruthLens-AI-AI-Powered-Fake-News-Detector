@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../middleware/auth';
 import { Analysis } from '../models/Analysis';
 import { Claim } from '../models/Claim';
 import { Evidence } from '../models/Evidence';
+import { ActivityLog } from '../models/ActivityLog';
 import { aiServiceClient } from '../services/aiServiceClient';
 import { urlFetcherService } from '../services/urlFetcherService';
 import { documentService } from '../services/documentService';
@@ -154,6 +155,18 @@ export class AnalysisController {
       await this.persistAnalysisResults(analysis._id as any, aiResult);
 
       const completeReport = await this.getFullReport(analysis._id.toString());
+
+      await ActivityLog.create({
+        userId: req.user?._id,
+        userEmail: req.user?.email || 'guest@truthlens.ai',
+        userName: req.user?.name || 'Guest User',
+        userRole: req.user?.role || 'guest',
+        action: 'ANALYZE_TEXT',
+        category: 'ANALYSIS',
+        details: `Analyzed text content (${text.substring(0, 80)}...). Found ${aiResult.claims.length} claims (${aiResult.refuted_claims_count} refuted).`,
+        status: 'SUCCESS'
+      }).catch(() => {});
+
       res.status(201).json({
         success: true,
         message: 'Text analysis completed successfully.',
@@ -212,6 +225,18 @@ export class AnalysisController {
       await this.persistAnalysisResults(analysis._id as any, aiResult);
 
       const completeReport = await this.getFullReport(analysis._id.toString());
+
+      await ActivityLog.create({
+        userId: req.user?._id,
+        userEmail: req.user?.email || 'guest@truthlens.ai',
+        userName: req.user?.name || 'Guest User',
+        userRole: req.user?.role || 'guest',
+        action: 'ANALYZE_URL',
+        category: 'ANALYSIS',
+        details: `Analyzed URL content (${url}). Found ${aiResult.claims.length} claims (${aiResult.refuted_claims_count} refuted).`,
+        status: 'SUCCESS'
+      }).catch(() => {});
+
       res.status(201).json({
         success: true,
         message: 'URL content extracted and analyzed successfully.',
@@ -273,6 +298,18 @@ export class AnalysisController {
       }
 
       const completeReport = await this.getFullReport(analysis._id.toString());
+
+      await ActivityLog.create({
+        userId: req.user?._id,
+        userEmail: req.user?.email || 'guest@truthlens.ai',
+        userName: req.user?.name || 'Guest User',
+        userRole: req.user?.role || 'guest',
+        action: 'ANALYZE_IMAGE',
+        category: 'ANALYSIS',
+        details: `Analyzed image screenshot via OCR (${ocrResult.extractedText.substring(0, 80)}...). Found ${aiResult.claims.length} claims.`,
+        status: 'SUCCESS'
+      }).catch(() => {});
+
       res.status(201).json({
         success: true,
         message: 'Screenshot text extracted via OCR and analyzed successfully.',
@@ -325,6 +362,18 @@ export class AnalysisController {
       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
       const completeReport = await this.getFullReport(analysis._id.toString());
+
+      await ActivityLog.create({
+        userId: req.user?._id,
+        userEmail: req.user?.email || 'guest@truthlens.ai',
+        userName: req.user?.name || 'Guest User',
+        userRole: req.user?.role || 'guest',
+        action: 'ANALYZE_DOCUMENT',
+        category: 'ANALYSIS',
+        details: `Analyzed document file (${docResult.extractedText.substring(0, 80)}...). Found ${aiResult.claims.length} claims.`,
+        status: 'SUCCESS'
+      }).catch(() => {});
+
       res.status(201).json({
         success: true,
         message: 'Document parsed and verified successfully.',
@@ -413,8 +462,8 @@ export class AnalysisController {
       return;
     }
 
-    // Access control: if user is logged in, must be owner or report must be guest/public
-    if (report.analysis.userId && req.user && report.analysis.userId.toString() !== req.user._id.toString()) {
+    // Access control: if user is logged in, must be owner or report must be guest/public (Admins can view any report)
+    if (report.analysis.userId && req.user && req.user.role !== 'admin' && report.analysis.userId.toString() !== req.user._id.toString()) {
       res.status(403).json({ success: false, message: 'Access denied to this analysis report.' });
       return;
     }

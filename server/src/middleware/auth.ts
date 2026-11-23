@@ -43,6 +43,14 @@ export const authenticate = async (
       return;
     }
 
+    if (user.isBlocked) {
+      res.status(403).json({
+        success: false,
+        message: 'Your account has been suspended or blocked by an administrator.'
+      });
+      return;
+    }
+
     req.user = user;
     req.userId = user._id.toString();
     req.isGuest = false;
@@ -53,6 +61,21 @@ export const authenticate = async (
       message: 'Invalid or expired session token.'
     });
   }
+};
+
+export const requireAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  if (!req.user || req.user.role !== 'admin') {
+    res.status(403).json({
+      success: false,
+      message: 'Access restricted: Administrator privileges required.'
+    });
+    return;
+  }
+  next();
 };
 
 export const optionalAuth = async (
@@ -73,13 +96,14 @@ export const optionalAuth = async (
       try {
         const decoded = jwt.verify(token, config.jwtSecret) as { id: string };
         const user = await User.findById(decoded.id).select('-passwordHash');
-        if (user) {
+        if (user && !user.isBlocked) {
           req.user = user;
           req.userId = user._id.toString();
           req.isGuest = false;
+        } else {
+          req.isGuest = true;
         }
       } catch (err) {
-        // Token invalid, proceed as guest
         req.isGuest = true;
       }
     } else {

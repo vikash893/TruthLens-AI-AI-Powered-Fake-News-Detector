@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileText,
   Globe,
@@ -18,6 +18,7 @@ type Tab = 'text' | 'url' | 'image' | 'document';
 
 export const NewAnalysisPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>('text');
 
   // Text Tab State
@@ -25,6 +26,19 @@ export const NewAnalysisPage: React.FC = () => {
 
   // URL Tab State
   const [url, setUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (location.state && (location.state as any).initialText) {
+      const incoming = (location.state as any).initialText.trim();
+      if (incoming.startsWith('http://') || incoming.startsWith('https://')) {
+        setUrl(incoming);
+        setActiveTab('url');
+      } else {
+        setText(incoming);
+        setActiveTab('text');
+      }
+    }
+  }, [location.state]);
 
   // Image Tab State
   const [imageFile, setImageFile] = useState<File | null>(null);

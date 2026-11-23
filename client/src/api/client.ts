@@ -1,5 +1,13 @@
 import axios from 'axios';
-import { IAnalysis, IClaim, IDashboardStats, IUser } from '../types';
+import {
+  IAnalysis,
+  IClaim,
+  IDashboardStats,
+  IUser,
+  IAdminMetrics,
+  IAdminUser,
+  IActivityLog
+} from '../types';
 
 const API_BASE = '/api/v1';
 
@@ -9,6 +17,15 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json'
   }
+});
+
+// Request interceptor to attach JWT token from localStorage
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 // Response interceptor for consistent error extraction
@@ -26,6 +43,8 @@ export const api = {
     apiClient.post<{ success: boolean; data: { user: IUser; token: string } }>('/auth/register', data),
   login: (data: { email: string; password: string }) =>
     apiClient.post<{ success: boolean; data: { user: IUser; token: string } }>('/auth/login', data),
+  googleAuth: (data: { email: string; name?: string; googleId?: string; avatar?: string }) =>
+    apiClient.post<{ success: boolean; data: { user: IUser; token: string } }>('/auth/google', data),
   logout: () => apiClient.post('/auth/logout'),
   getMe: () => apiClient.get<{ success: boolean; data: { user: IUser } }>('/auth/me'),
 
@@ -61,5 +80,19 @@ export const api = {
 
   // Feedback
   submitFeedback: (data: { analysisId: string; claimId?: string; feedbackType: string; description: string }) =>
-    apiClient.post('/feedback', data)
+    apiClient.post('/feedback', data),
+
+  // Admin APIs
+  getAdminMetrics: () =>
+    apiClient.get<{ success: boolean; data: { metrics: IAdminMetrics; distribution: Record<string, number> } }>('/admin/metrics'),
+  getAdminUsers: (params?: { search?: string; filter?: string }) =>
+    apiClient.get<{ success: boolean; data: { users: IAdminUser[] } }>('/admin/users', { params }),
+  toggleUserBlock: (id: string, isBlocked: boolean) =>
+    apiClient.patch<{ success: boolean; message: string; data: { user: IAdminUser } }>(`/admin/users/${id}/status`, { isBlocked }),
+  deleteUser: (id: string) =>
+    apiClient.delete<{ success: boolean; message: string }>(`/admin/users/${id}`),
+  createAdmin: (data: { name: string; email: string; password: string }) =>
+    apiClient.post<{ success: boolean; message: string; data: { user: IUser } }>('/admin/users/create-admin', data),
+  getAdminLogs: (params?: { limit?: number; category?: string; search?: string }) =>
+    apiClient.get<{ success: boolean; data: { logs: IActivityLog[] } }>('/admin/logs', { params })
 };

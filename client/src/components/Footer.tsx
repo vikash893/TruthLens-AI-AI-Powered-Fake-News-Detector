@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { ShieldCheck, Github, FileText, Lock, BookOpen } from 'lucide-react';
+import { ShieldCheck, Mail, Globe, Lock, BookOpen, HeartHandshake } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -10,59 +10,64 @@ export const Footer: React.FC = () => {
           {/* Brand & Purpose */}
           <div className="md:col-span-2 space-y-3">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold text-xs">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-700 to-brand-500 flex items-center justify-center text-white font-black text-xs shadow-md shadow-brand-500/20">
                 TL
               </div>
-              <span className="font-bold text-base text-slate-900 dark:text-white">
-                TruthLens AI
+              <span className="font-extrabold text-base text-slate-900 dark:text-white">
+                TruthLens <span className="text-brand-600 dark:text-brand-400">AI</span>
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md leading-relaxed">
-              An evidence-first fact-checking assistant designed to extract verifiable factual claims, retrieve corroborating and contradictory sources, and provide transparent uncertainty estimates.
+              An evidence-first fact-checking platform that combines live internet cross-examination,
+              internal ground-truth benchmarks, stance classification, and transparent citation provenance.
             </p>
             <div className="inline-block px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-400">
               Core Doctrine: <strong>Evidence first, verdict second.</strong>
             </div>
           </div>
 
-          {/* Research & Platform */}
+          {/* Navigation Links */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">
-              Platform & Research
+              Explore & Tools
             </h4>
             <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400">
               <li>
-                <Link to="/methodology" className="hover:text-brand-600 transition-colors">
-                  Methodology & Pipeline
-                </Link>
+                <Link to="/" className="hover:text-brand-600 transition-colors">Home Portal</Link>
               </li>
               <li>
-                <Link to="/analyze" className="hover:text-brand-600 transition-colors">
-                  Submit Verification
-                </Link>
+                <Link to="/analyze" className="hover:text-brand-600 transition-colors">Fact-Check (URL & Text)</Link>
               </li>
               <li>
-                <Link to="/dashboard" className="hover:text-brand-600 transition-colors">
-                  Verification Analytics
-                </Link>
+                <Link to="/about" className="hover:text-brand-600 transition-colors">About TruthLens AI</Link>
+              </li>
+              <li>
+                <Link to="/contact" className="hover:text-brand-600 transition-colors">Contact & Support</Link>
+              </li>
+              <li>
+                <Link to="/methodology" className="hover:text-brand-600 transition-colors">8-Stage Methodology</Link>
               </li>
             </ul>
           </div>
 
-          {/* Disclaimers & Ethics */}
+          {/* Access & Portals */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-slate-200 mb-3">
-              Ethics & Privacy
+              Portals & Legal
             </h4>
             <ul className="space-y-2 text-xs text-slate-500 dark:text-slate-400">
               <li>
-                <Link to="/privacy" className="hover:text-brand-600 transition-colors">
-                  Privacy Policy & Retention
-                </Link>
+                <Link to="/login" className="hover:text-brand-600 transition-colors">Unified Login Portal</Link>
               </li>
               <li>
-                <span className="text-slate-400 text-[11px] block leading-normal">
-                  Not a substitute for professional legal, medical, or financial judgment.
+                <Link to="/dashboard" className="hover:text-brand-600 transition-colors">User Dashboard</Link>
+              </li>
+              <li>
+                <Link to="/privacy" className="hover:text-brand-600 transition-colors">Privacy & Data Ethics</Link>
+              </li>
+              <li>
+                <span className="text-slate-400 text-[11px] block leading-normal mt-2">
+                  Integrated with verified IFCN fact-checkers & primary wire services.
                 </span>
               </li>
             </ul>
@@ -71,10 +76,10 @@ export const Footer: React.FC = () => {
 
         <div className="pt-6 border-t border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-400">
           <div>
-            &copy; {new Date().getFullYear()} TruthLens AI. College Major Project & Research Prototype.
+            &copy; {new Date().getFullYear()} TruthLens AI System. Evidence-Driven Fact-Checking Network.
           </div>
           <div className="text-[11px] text-slate-400">
-            Modular MERN + Python AI Microservice Architecture
+            Powered by Multi-Source Semantic Reranking & Web Cross-Examination
           </div>
         </div>
       </div>
