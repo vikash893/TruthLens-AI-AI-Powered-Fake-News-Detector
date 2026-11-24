@@ -13,10 +13,10 @@ export const config = {
   maxUploadSizeBytes: 10 * 1024 * 1024, // 10 MB
   rateLimits: {
     generalWindowMs: 15 * 60 * 1000,
-    generalMax: 100,
+    generalMax: process.env.NODE_ENV === 'production' ? 200 : 1000,
     authWindowMs: 15 * 60 * 1000,
-    authMax: 15,
+    authMax: process.env.NODE_ENV === 'production' ? 50 : 500,
     analysisWindowMs: 15 * 60 * 1000,
-    analysisMax: 30
+    analysisMax: process.env.NODE_ENV === 'production' ? 60 : 300
   }
 };

@@ -18,7 +18,7 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   body: z.object({
-    email: z.string().email('Invalid email address'),
+    email: z.string().min(1, 'Email or username is required'),
     password: z.string().min(1, 'Password is required')
   })
 });
@@ -106,13 +106,28 @@ export class AuthController {
 
   async login(req: Request, res: Response): Promise<void> {
     const { email, password } = req.body;
-    const lowerEmail = email.toLowerCase().trim();
+    const identifier = (email || '').toLowerCase().trim();
 
-    const user = await User.findOne({ email: lowerEmail });
+    // Check by email or name (case-insensitive) or quick aliases
+    let user = await User.findOne({
+      $or: [
+        { email: identifier },
+        { name: new RegExp(`^${identifier}$`, 'i') }
+      ]
+    });
+
+    if (!user) {
+      if (identifier === 'admin') {
+        user = await User.findOne({ email: 'admin@truthlens.ai' });
+      } else if (identifier === 'user') {
+        user = await User.findOne({ email: 'user@truthlens.ai' });
+      }
+    }
+
     if (!user) {
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password.'
+        message: 'Invalid email, username, or password.'
       });
       return;
     }
