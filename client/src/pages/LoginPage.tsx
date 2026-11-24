@@ -6,8 +6,6 @@ import {
   AlertCircle,
   Lock,
   Mail,
-  UserCheck,
-  KeyRound,
   Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -33,17 +31,18 @@ export const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError('Please provide both email and password.');
+      setError('Please provide both identifier and password.');
       return;
     }
 
     setLoading(true);
     setError(null);
     try {
+      // Backend validates credentials and determines role (admin vs user)
       const loggedUser = await login(email, password);
       handleRedirect(loggedUser.role);
     } catch (err: any) {
-      setError(err.message || 'Invalid email or password.');
+      setError(err.message || 'Invalid credentials or account suspended.');
     } finally {
       setLoading(false);
     }
@@ -53,8 +52,6 @@ export const LoginPage: React.FC = () => {
     setGoogleLoading(true);
     setError(null);
     try {
-      // Authenticate with Google OAuth
-      // For immediate ease of testing, prompt or use demo Google profile
       const googleEmail = email && email.includes('@') ? email : 'google.user@truthlens.ai';
       const loggedUser = await googleLogin(
         googleEmail,
@@ -69,58 +66,19 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const fillQuickCredentials = (role: 'admin' | 'user') => {
-    if (role === 'admin') {
-      setEmail('admin@truthlens.ai');
-      setPassword('Admin@123');
-    } else {
-      setEmail('user@truthlens.ai');
-      setPassword('User@123');
-    }
-    setError(null);
-  };
-
   return (
-    <div className="max-w-md mx-auto px-4 py-12">
+    <div className="max-w-md mx-auto px-4 py-16">
       <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-700 to-brand-500 text-white flex items-center justify-center mx-auto shadow-lg shadow-brand-500/25">
             <ShieldCheck className="w-8 h-8" />
           </div>
-          <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">
-            Unified Sign In
+          <h1 className="text-2xl font-black text-slate-900 dark:text-white">
+            TruthLens Secure Sign In
           </h1>
           <p className="text-xs text-slate-500 dark:text-slate-400">
-            One portal for Users & Administrators. You will automatically be routed to your designated dashboard.
+            Enter your credentials. Backend session verification will determine your access permissions.
           </p>
-        </div>
-
-        {/* Quick Demo Credentials Banner */}
-        <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 text-xs space-y-2">
-          <div className="flex items-center justify-between text-slate-600 dark:text-slate-400 font-semibold">
-            <span className="flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-brand-500" />
-              Quick Fill Demo Accounts:
-            </span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fillQuickCredentials('admin')}
-              className="py-1.5 px-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800/60 text-indigo-700 dark:text-indigo-300 font-semibold text-[11px] flex items-center justify-center gap-1 transition-colors"
-            >
-              <KeyRound className="w-3 h-3" />
-              Admin Portal
-            </button>
-            <button
-              type="button"
-              onClick={() => fillQuickCredentials('user')}
-              className="py-1.5 px-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] flex items-center justify-center gap-1 transition-colors"
-            >
-              <UserCheck className="w-3 h-3" />
-              User Dashboard
-            </button>
-          </div>
         </div>
 
         {error && (
@@ -136,7 +94,7 @@ export const LoginPage: React.FC = () => {
             type="button"
             onClick={handleGoogleSignIn}
             disabled={googleLoading || loading}
-            className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
+            className="w-full py-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 hover:bg-slate-50 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24">
               <path
@@ -163,8 +121,8 @@ export const LoginPage: React.FC = () => {
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-slate-200 dark:border-slate-800" />
             </div>
-            <div className="relative flex justify-center text-[11px] uppercase tracking-wider text-slate-400">
-              <span className="bg-white dark:bg-slate-900 px-3">or continue with email</span>
+            <div className="relative flex justify-center text-[10px] uppercase tracking-wider text-slate-400">
+              <span className="bg-white dark:bg-slate-900 px-3">or continue with credentials</span>
             </div>
           </div>
         </div>
@@ -172,12 +130,12 @@ export const LoginPage: React.FC = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-              Email Address
+              Email or Username
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@organization.com"
@@ -211,8 +169,17 @@ export const LoginPage: React.FC = () => {
             disabled={loading}
             className="w-full py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-md shadow-brand-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
-            <ArrowRight className="w-4 h-4" />
+            {loading ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Authenticating with server...</span>
+              </>
+            ) : (
+              <>
+                <span>Sign In</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
         </form>
 

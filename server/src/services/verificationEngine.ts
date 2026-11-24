@@ -304,21 +304,37 @@ export class VerificationEngine {
     ];
   }
 
-  // Extract distinct, testable claims from input text
-  private extractClaims(content: string, maxClaims: number = 5): string[] {
-    const rawSentences = content
-      .split(/(?<=[.?!])\s+(?=[A-Z0-9])/)
-      .map(s => s.trim())
-      .filter(s => s.length > 25 && s.length < 350);
+  // Extract distinct, testable claims from input text (handles OCR screenshot text and raw text)
+  private extractClaims(content: string, maxClaims: number = 5, inputType: string = 'text'): string[] {
+    // 1. Clean OCR artifacts and social media chrome if screenshot/image
+    let cleaned = content
+      .replace(/[\r\n]+/g, '\n')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    if (inputType === 'image') {
+      // Filter out typical screenshot chrome: "10:30 AM", "retweets", "likes", "reply", "follow"
+      cleaned = cleaned
+        .replace(/\b(?:\d{1,2}:\d{2}\s*(?:AM|PM)?|\d+\s*(?:Retweets|Quotes|Likes|Bookmarks|Views)|Follow|Subscribe|Share)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    // 2. Split on punctuation or prominent line breaks
+    const rawSentences = cleaned
+      .split(/(?<=[.?!;])\s+(?=[A-Z0-9])|\n+/)
+      .map(s => s.trim().replace(/^[^a-zA-Z0-9]+/, ''))
+      .filter(s => s.length > 20 && s.length < 400);
 
     const claims: string[] = [];
     const claimIndicators = [
       'claims', 'alleged', 'reported', 'announced', 'discovered', 'revealed',
       'found', 'died', 'arrested', 'detained', 'banned', 'confirmed', 'stated',
-      'according to', 'warns', 'conspiracy', 'scam', 'secret', 'never', 'always'
+      'according to', 'warns', 'conspiracy', 'scam', 'secret', 'never', 'always',
+      'election', 'vote', 'vaccine', 'minister', 'government', 'police', 'breaking'
     ];
 
-    // Priority to sentences containing factual assertions or numbers/dates
+    // Priority to sentences containing factual assertions, numbers, or key indicators
     for (const sentence of rawSentences) {
       const lower = sentence.toLowerCase();
       const hasNumber = /\b\d+(?:[,\.]\d+)?\b/.test(sentence);
@@ -352,7 +368,7 @@ export class VerificationEngine {
   ): Promise<AIAnalysisResult> {
     logger.info(`VerificationEngine executing comprehensive verification for ${content.length} chars (type=${inputType})`);
 
-    const extractedClaims = this.extractClaims(content, 4);
+    const extractedClaims = this.extractClaims(content, 4, inputType);
     const analyzedClaims: AIClaimResponse[] = [];
 
     let supportedTotal = 0;
